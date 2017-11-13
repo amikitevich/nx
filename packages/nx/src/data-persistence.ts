@@ -1,7 +1,5 @@
 import { Injectable, Type } from '@angular/core';
-import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Actions } from '@ngrx/effects';
-import { ROUTER_NAVIGATION, RouterNavigationAction } from '@ngrx/router-store';
 import { Action, State, Store } from '@ngrx/store';
 import { Observable } from 'rxjs/Observable';
 import { of } from 'rxjs/observable/of';
@@ -30,20 +28,12 @@ export interface OptimisticUpdateOpts<T, A> {
 }
 
 /**
- * See {@link DataPersistence.navigation} for more information.
+ * See {@link DataPersistence.fetch} for more information.
  */
 export interface FetchOpts<T, A> {
   id?(a: A, state?: T): any;
   run(a: A, state?: T): Observable<Action> | Action | void;
   onError?(a: A, e: any): Observable<any> | any;
-}
-
-/**
- * See {@link DataPersistence.navigation} for more information.
- */
-export interface HandleNavigationOpts<T> {
-  run(a: ActivatedRouteSnapshot, state?: T): Observable<Action> | Action | void;
-  onError?(a: ActivatedRouteSnapshot, e: any): Observable<any> | any;
 }
 
 type Pair = [Action, any];
@@ -220,52 +210,6 @@ export class DataPersistence<T> {
     }
   }
 
-  /**
-   * @whatItDoes Handles data fetching as part of router navigation.
-   *
-   * Data fetching implemented naively suffers from race conditions and poor error handling.
-   *
-   * `navigation` addresses these problems.
-   *
-   * It checks if an activated router state contains the passed in component type, and, if it does, runs the `run`
-   * callback. It provides the activated snapshot associated with the component and the current state. And it only runs
-   * the last request.
-   *
-   * ## Example:
-   *
-   * ```typescript
-   * @Injectable()
-   * class TodoEffects {
-   *   @Effect() loadTodo = this.s.navigation(TodoComponent, {
-   *     run: (a, state) => {
-   *       return this.backend.fetchTodo(a.params['id']).map(todo => ({
-   *         type: 'TODO_LOADED',
-   *         payload: todo
-   *       }));
-   *     },
-   *     onError: (a, e: any) => {
-   *       // we can log and error here and return null
-   *       // we can also navigate back
-   *       return null;
-   *     }
-   *   });
-   *   constructor(private s: DataPersistence<TodosState>, private backend: Backend) {}
-   * }
-   * ```
-   *
-   */
-  navigation(component: Type<any>, opts: HandleNavigationOpts<T>): Observable<any> {
-    const nav = filter.call(
-      map.call(this.actions.ofType(ROUTER_NAVIGATION), (a: RouterNavigationAction<RouterStateSnapshot>) =>
-        findSnapshot(component, a.payload.routerState.root)
-      ),
-      s => !!s
-    );
-
-    const pairs = withLatestFrom.call(nav, this.store);
-    return switchMap.call(pairs, this.runWithErrorHandling(opts.run, opts.onError));
-  }
-
   private runWithErrorHandling(run: any, onError: any) {
     return a => {
       try {
@@ -276,19 +220,6 @@ export class DataPersistence<T> {
       }
     };
   }
-}
-
-function findSnapshot(component: Type<any>, s: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
-  if (s.routeConfig && s.routeConfig.component === component) {
-    return s;
-  }
-  for (const c of s.children) {
-    const ss = findSnapshot(component, c);
-    if (ss) {
-      return ss;
-    }
-  }
-  return null;
 }
 
 function wrapIntoObservable(obj: any): Observable<any> {

@@ -1,12 +1,10 @@
 import 'rxjs/add/operator/delay';
 
 import { Component, Injectable } from '@angular/core';
-import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, Router } from '@angular/router';
-import { RouterTestingModule } from '@angular/router/testing';
-import { Actions, Effect, EffectsModule } from '@ngrx/effects';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { Actions, Effect } from '@ngrx/effects';
 import { provideMockActions } from '@ngrx/effects/testing';
-import { StoreRouterConnectingModule } from '@ngrx/router-store';
 import { Store, StoreModule } from '@ngrx/store';
 import { Observable } from 'rxjs/Observable';
 import { of } from 'rxjs/observable/of';
@@ -15,7 +13,6 @@ import { delay } from 'rxjs/operator/delay';
 import { Subject } from 'rxjs/Subject';
 
 import { DataPersistence } from '../index';
-import { NxModule } from '../src/nx.module';
 import { readAll } from '../testing';
 
 // interfaces
@@ -74,162 +71,6 @@ class TodoComponent {
 }
 
 describe('DataPersistence', () => {
-  describe('navigation', () => {
-    beforeEach(() => {
-      TestBed.configureTestingModule({
-        declarations: [RootCmp, TodoComponent],
-        imports: [
-          StoreModule.forRoot({ todos: todosReducer, user: userReducer }),
-          StoreRouterConnectingModule,
-          RouterTestingModule.withRoutes([{ path: 'todo/:id', component: TodoComponent }]),
-          NxModule.forRoot()
-        ]
-      });
-    });
-
-    describe('successful navigation', () => {
-      @Injectable()
-      class TodoEffects {
-        @Effect()
-        loadTodo = this.s.navigation(TodoComponent, {
-          run: (a, state) => {
-            return {
-              type: 'TODO_LOADED',
-              payload: { id: a.params['id'], user: state.user }
-            };
-          },
-          onError: () => null
-        });
-        constructor(private s: DataPersistence<TodosState>) {}
-      }
-
-      beforeEach(() => {
-        TestBed.configureTestingModule({
-          providers: [TodoEffects],
-          imports: [EffectsModule.forRoot([TodoEffects])]
-        });
-      });
-
-      it(
-        'should work',
-        fakeAsync(() => {
-          const root = TestBed.createComponent(RootCmp);
-
-          const router: Router = TestBed.get(Router);
-          router.navigateByUrl('/todo/123');
-          tick(0);
-          root.detectChanges(false);
-
-          expect(root.elementRef.nativeElement.innerHTML).toContain('ID 123');
-          expect(root.elementRef.nativeElement.innerHTML).toContain('User bob');
-        })
-      );
-    });
-
-    describe('`run` throwing an error', () => {
-      @Injectable()
-      class TodoEffects {
-        @Effect()
-        loadTodo = this.s.navigation(TodoComponent, {
-          run: (a, state) => {
-            if (a.params['id'] === '123') {
-              throw new Error('boom');
-            } else {
-              return {
-                type: 'TODO_LOADED',
-                payload: { id: a.params['id'], user: state.user }
-              };
-            }
-          },
-          onError: (a, e) => ({ type: 'ERROR', payload: { error: e } })
-        });
-        constructor(private s: DataPersistence<TodosState>) {}
-      }
-
-      beforeEach(() => {
-        TestBed.configureTestingModule({
-          providers: [TodoEffects],
-          imports: [EffectsModule.forRoot([TodoEffects])]
-        });
-      });
-
-      it(
-        'should work',
-        fakeAsync(() => {
-          const root = TestBed.createComponent(RootCmp);
-
-          const router: Router = TestBed.get(Router);
-          let action;
-          TestBed.get(Actions).subscribe(a => (action = a));
-
-          router.navigateByUrl('/todo/123');
-          tick(0);
-          root.detectChanges(false);
-          expect(root.elementRef.nativeElement.innerHTML).not.toContain('ID 123');
-          expect(action.type).toEqual('ERROR');
-          expect(action.payload.error.message).toEqual('boom');
-
-          // can recover after an error
-          router.navigateByUrl('/todo/456');
-          tick(0);
-          root.detectChanges(false);
-          expect(root.elementRef.nativeElement.innerHTML).toContain('ID 456');
-        })
-      );
-    });
-
-    describe('`run` returning an error observable', () => {
-      @Injectable()
-      class TodoEffects {
-        @Effect()
-        loadTodo = this.s.navigation(TodoComponent, {
-          run: (a, state) => {
-            if (a.params['id'] === '123') {
-              return _throw('boom');
-            } else {
-              return {
-                type: 'TODO_LOADED',
-                payload: { id: a.params['id'], user: state.user }
-              };
-            }
-          },
-          onError: (a, e) => ({ type: 'ERROR', payload: { error: e } })
-        });
-        constructor(private s: DataPersistence<TodosState>) {}
-      }
-
-      beforeEach(() => {
-        TestBed.configureTestingModule({
-          providers: [TodoEffects],
-          imports: [EffectsModule.forRoot([TodoEffects])]
-        });
-      });
-
-      it(
-        'should work',
-        fakeAsync(() => {
-          const root = TestBed.createComponent(RootCmp);
-
-          const router: Router = TestBed.get(Router);
-          let action;
-          TestBed.get(Actions).subscribe(a => (action = a));
-
-          router.navigateByUrl('/todo/123');
-          tick(0);
-          root.detectChanges(false);
-          expect(root.elementRef.nativeElement.innerHTML).not.toContain('ID 123');
-          expect(action.type).toEqual('ERROR');
-          expect(action.payload.error).toEqual('boom');
-
-          router.navigateByUrl('/todo/456');
-          tick(0);
-          root.detectChanges(false);
-          expect(root.elementRef.nativeElement.innerHTML).toContain('ID 456');
-        })
-      );
-    });
-  });
-
   describe('fetch', () => {
     beforeEach(() => {
       TestBed.configureTestingModule({ providers: [DataPersistence] });
