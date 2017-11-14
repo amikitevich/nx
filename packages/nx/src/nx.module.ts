@@ -4,6 +4,7 @@ import { DataPersistence } from './data-persistence';
 export * from './data-persistence';
 
 /**
+ * Nx for without dependency on router-store
  * @whatItDoes Provides services for enterprise Angular applications.
  *
  * See {@link DataPersistence} for more information.
