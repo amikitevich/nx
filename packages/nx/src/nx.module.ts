@@ -1,6 +1,8 @@
 import { ModuleWithProviders, NgModule } from '@angular/core';
 import { DataPersistence } from './data-persistence';
 
+export * from './data-persistence';
+
 /**
  * @whatItDoes Provides services for enterprise Angular applications.
  *
